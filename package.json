@@ -1,0 +1,10 @@
+{
+  "name": "student-ai-site-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm start --prefix student-ai-site",
+    "dev": "npm run dev --prefix student-ai-site",
+    "check": "npm run check --prefix student-ai-site"
+  }
+}
