@@ -339,6 +339,81 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function initLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  const loaderBar = document.getElementById('loaderBar');
+  const loaderPercent = document.getElementById('loaderPercent');
+  const loaderStatusText = document.getElementById('loaderStatusText');
+
+  if (!loadingScreen) {
+    return;
+  }
+
+  let isDone = false;
+
+  const messages = [
+    { at: 0, text: 'Initializing pedagogical neural core...' },
+    { at: 24, text: 'Calibrating Socratic dialogue & first principles...' },
+    { at: 54, text: 'Establishing private zero-tracking gateway...' },
+    { at: 82, text: 'Preparing interactive derivation workspace...' },
+    { at: 98, text: 'Academic Mentor Ready • Entering workspace' }
+  ];
+
+  function dismiss() {
+    if (isDone) {
+      return;
+    }
+    isDone = true;
+    if (loaderBar) loaderBar.style.width = '100%';
+    if (loaderPercent) loaderPercent.textContent = '100%';
+    if (loaderStatusText) loaderStatusText.textContent = 'Welcome, Scholar • Workspace Ready';
+    setTimeout(() => {
+      loadingScreen.classList.add('loaded');
+      setTimeout(() => {
+        loadingScreen.remove();
+      }, 700);
+    }, 250);
+  }
+
+  loadingScreen.addEventListener('click', dismiss);
+
+  const startTime = Date.now();
+  const totalDuration = 1800;
+
+  function update() {
+    if (isDone) {
+      return;
+    }
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(100, Math.floor((elapsed / totalDuration) * 100));
+
+    if (loaderBar) {
+      loaderBar.style.width = `${progress}%`;
+    }
+    if (loaderPercent) {
+      loaderPercent.textContent = `${progress}%`;
+    }
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (progress >= messages[i].at) {
+        if (loaderStatusText && loaderStatusText.textContent !== messages[i].text) {
+          loaderStatusText.textContent = messages[i].text;
+        }
+        break;
+      }
+    }
+
+    if (elapsed < totalDuration) {
+      requestAnimationFrame(update);
+    } else {
+      dismiss();
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+initLoadingScreen();
 loadHistory();
 checkHealth();
 setInterval(checkHealth, 60000);

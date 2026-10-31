@@ -13,6 +13,57 @@
   <link rel="apple-touch-icon" href="logo.svg">
 </head>
 <body>
+  <div id="loadingScreen" class="loading-screen" aria-live="polite">
+    <div class="loader-backdrop">
+      <div class="loader-ambient-glow"></div>
+      <div class="loader-grid-matrix"></div>
+    </div>
+    <div class="loader-content">
+      <div class="loader-emblem-wrap">
+        <div class="loader-ring loader-ring-outer"></div>
+        <div class="loader-ring loader-ring-inner"></div>
+        <div class="loader-pulse-core"></div>
+        <div class="loader-logo-box">
+          <img src="logo.svg" alt="Study Tutor AI" width="56" height="56" class="loader-logo-img">
+        </div>
+      </div>
+      <div class="loader-text-group">
+        <div class="loader-badge">
+          <span class="loader-badge-spark">✦</span>
+          <span>ACADEMIC NEURAL MENTOR</span>
+        </div>
+        <h2 class="loader-title">Study Tutor AI</h2>
+        <p class="loader-hook">First-Principles Academic Mentorship • Step-by-Step Mastery</p>
+      </div>
+      <div class="loader-progress-card">
+        <div class="loader-progress-meta">
+          <span id="loaderStatusText" class="loader-status">Initializing pedagogical neural core...</span>
+          <span id="loaderPercent" class="loader-percent">0%</span>
+        </div>
+        <div class="loader-track">
+          <div id="loaderBar" class="loader-bar" style="width: 0%">
+            <span class="loader-bar-glow"></span>
+          </div>
+        </div>
+        <div class="loader-features">
+          <span>Intuitive Derivations</span>
+          <span class="sep">•</span>
+          <span>Socratic Reasoning</span>
+          <span class="sep">•</span>
+          <span>Zero Tracking</span>
+        </div>
+      </div>
+      <div class="loader-skip-hint">Click anywhere to skip</div>
+    </div>
+  </div>
+
+  <div class="video-bg-container" aria-hidden="true">
+    <video class="video-bg" autoplay loop muted playsinline preload="auto">
+      <source src="background.webm" type="video/webm">
+      <source src="background.mp4" type="video/mp4">
+    </video>
+    <div class="video-overlay"></div>
+  </div>
   <div class="app-layout">
     <header class="top-nav">
       <div class="brand-group">
