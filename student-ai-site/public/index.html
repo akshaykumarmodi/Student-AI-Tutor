@@ -11,33 +11,64 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
-</head>
-<body>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script>window.katex || document.write('<script src="vendor/katex/katex.min.js"><\/script>');</script>
+</head><body>
   <div id="loadingScreen" class="loading-screen" aria-live="polite">
     <div class="loader-backdrop">
       <div class="loader-ambient-glow"></div>
+      <div class="loader-radar-beam"></div>
       <div class="loader-grid-matrix"></div>
+      <div class="loader-scanline"></div>
     </div>
+
+    <div class="loader-hud hud-tl">
+      <span class="hud-mono">SYS//STUDY.AI.v2.4</span>
+      <span class="hud-sub">NEURAL ARCH: SOCRATIC</span>
+    </div>
+    <div class="loader-hud hud-tr">
+      <span class="hud-mono">CORE: FIRST_PRINCIPLES</span>
+      <span class="hud-sub">STATUS: QUANTUM SYNC</span>
+    </div>
+    <div class="loader-hud hud-bl">
+      <span class="hud-mono">PRIVACY: ZERO RETENTION</span>
+      <span class="hud-sub">ENCRYPTION: AES-GCM</span>
+    </div>
+    <div class="loader-hud hud-br">
+      <span class="hud-mono">INFERENCE: STREAMING</span>
+      <span class="hud-sub">MODE: STEP-BY-STEP</span>
+    </div>
+
     <div class="loader-content">
       <div class="loader-emblem-wrap">
-        <div class="loader-ring loader-ring-outer"></div>
-        <div class="loader-ring loader-ring-inner"></div>
+        <div class="loader-flare-line"></div>
+        <div class="loader-gyro loader-gyro-outer"></div>
+        <div class="loader-gyro loader-gyro-middle"></div>
+        <div class="loader-gyro loader-gyro-inner"></div>
         <div class="loader-pulse-core"></div>
         <div class="loader-logo-box">
-          <img src="logo.svg" alt="Study Tutor AI" width="56" height="56" class="loader-logo-img">
+          <img src="logo.svg" alt="Study Tutor AI" width="60" height="60" class="loader-logo-img">
         </div>
       </div>
+
+      <div class="loader-equalizer" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+
       <div class="loader-text-group">
         <div class="loader-badge">
           <span class="loader-badge-spark">✦</span>
-          <span>ACADEMIC NEURAL MENTOR</span>
+          <span>QUANTUM SOCRATIC ENGINE</span>
         </div>
         <h2 class="loader-title">Study Tutor AI</h2>
         <p class="loader-hook">First-Principles Academic Mentorship • Step-by-Step Mastery</p>
       </div>
+
       <div class="loader-progress-card">
         <div class="loader-progress-meta">
           <span id="loaderStatusText" class="loader-status">Initializing pedagogical neural core...</span>
@@ -47,6 +78,10 @@
           <div id="loaderBar" class="loader-bar" style="width: 0%">
             <span class="loader-bar-glow"></span>
           </div>
+        </div>
+        <div class="loader-telemetry-stream" id="loaderTelemetry">
+          <span class="tele-item">&gt; SYNAPSE_INIT [OK]</span>
+          <span class="tele-item">&gt; SOCRATIC_GATEWAY [ACTIVE]</span>
         </div>
         <div class="loader-features">
           <span>Intuitive Derivations</span>
@@ -65,46 +100,94 @@
       <source src="background.webm" type="video/webm">
       <source src="background.mp4" type="video/mp4">
     </video>
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-star-grid"></div>
+    <div class="cursor-glow" id="cursorGlow"></div>
     <div class="video-overlay"></div>
   </div>
+
   <div class="app-layout">
     <header class="top-nav">
-      <div class="brand-group">
-        <div class="brand-icon">
-          <img src="logo.svg" alt="Study Tutor AI" width="38" height="38" class="brand-logo-img">
+      <div class="nav-main-bar">
+        <div class="brand-group">
+          <div class="brand-icon">
+            <img src="logo.svg" alt="Study Tutor AI" width="38" height="38" class="brand-logo-img">
+          </div>
+          <div class="brand-text">
+            <div class="brand-title-wrap">
+              <span class="brand-title">Study Tutor AI</span>
+              <span class="brand-version-pill">SOCRATIC v2.4</span>
+            </div>
+          </div>
         </div>
-        <div class="brand-text">
-          <span class="brand-title">Study Tutor AI</span>
-          <span class="brand-subtitle">University Academic Mentor</span>
+
+        <nav class="nav-modes" aria-label="Pedagogical Modes">
+          <button type="button" class="mode-tab active" data-mode="socratic">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Socratic Guide</span>
+          </button>
+          <button type="button" class="mode-tab" data-mode="derivation">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <span>Step Derivations</span>
+          </button>
+          <button type="button" class="mode-tab" data-mode="principles">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            <span>First Principles</span>
+          </button>
+        </nav>
+
+        <div class="header-controls">
+          <div class="subject-picker-wrap">
+            <label for="subjectSelect" class="visually-hidden">Academic Field</label>
+            <div class="subject-picker-inner">
+              <span class="picker-icon">📚</span>
+              <select id="subjectSelect" class="subject-select" aria-label="Select subject focus">
+                <option value="general">General Academic</option>
+                <option value="maths">Mathematics</option>
+                <option value="physics">Physics</option>
+                <option value="chemistry">Chemistry</option>
+                <option value="programming">Computer Science</option>
+                <option value="biology">Biology</option>
+                <option value="history">History</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="statusBadge" class="status-badge checking" title="Checking provider connection...">
+            <span class="status-dot"></span>
+            <span id="statusText" class="status-text">Checking status...</span>
+          </div>
+
+          <button id="newChatBtn" class="nav-action-btn primary" title="Start new inquiry session" aria-label="Start new session">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>New Session</span>
+          </button>
+
+          <button id="clearChatBtn" class="icon-btn" title="Clear conversation" aria-label="Clear conversation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+
+          <button id="infoBtn" class="icon-btn info-btn" title="Academic Methodology & Privacy" aria-label="Academic Methodology & Privacy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </button>
         </div>
       </div>
-
-      <div class="header-controls">
-        <div class="subject-picker-wrap">
-          <label for="subjectSelect" class="visually-hidden">Academic Field</label>
-          <select id="subjectSelect" class="subject-select" aria-label="Select subject focus">
-            <option value="general">Focus: General Inquiry</option>
-            <option value="maths">Focus: Mathematics</option>
-            <option value="physics">Focus: Physics</option>
-            <option value="chemistry">Focus: Chemistry</option>
-            <option value="programming">Focus: Computer Science</option>
-            <option value="biology">Focus: Biology</option>
-            <option value="history">Focus: History</option>
-          </select>
-        </div>
-
-        <div id="statusBadge" class="status-badge checking" title="Checking provider connection...">
-          <span class="status-dot"></span>
-          <span id="statusText" class="status-text">Checking status...</span>
-        </div>
-
-        <button id="clearChatBtn" class="icon-btn" title="Clear conversation" aria-label="Clear conversation">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          </svg>
-        </button>
-      </div>
+      <div class="nav-glow-border"></div>
     </header>
 
     <main class="chat-viewport" id="chatViewport">
@@ -202,6 +285,45 @@
         <span>AI can make mistakes. Verify important formulas and academic references. Press Enter to send, Shift+Enter for new line.</span>
       </div>
     </footer>
+  </div>
+
+  <div id="infoModal" class="modal-backdrop hidden" aria-modal="true" role="dialog">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-pill">ACADEMIC CHARTER</span>
+          <h3 class="modal-title">Study Tutor AI Methodology</h3>
+        </div>
+        <button id="closeModalBtn" class="icon-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-feature">
+          <div class="feature-icon">🏛️</div>
+          <div>
+            <h4>Socratic Pedagogy, Never Ghostwriting</h4>
+            <p>We teach underlying principles, boundary derivations, and systematic intuition. Graded assignment completion is refused to safeguard authentic mastery.</p>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <div class="feature-icon">📐</div>
+          <div>
+            <h4>Step-by-Step Derivations</h4>
+            <p>Every concept is decomposed into invariants, governing laws, and verifiable transitions rather than opaque leap-of-faith answers.</p>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <div class="feature-icon">🛡️</div>
+          <div>
+            <h4>Zero-Data-Retention Security</h4>
+            <p>Inquiries route exclusively through a secured local backend gateway. Your session never logs student inputs or sells academic profiles.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

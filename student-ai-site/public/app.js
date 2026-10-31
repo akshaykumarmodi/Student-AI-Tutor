@@ -17,6 +17,20 @@ const statusBadge = document.getElementById('statusBadge');
 const statusText = document.getElementById('statusText');
 const clearChatBtn = document.getElementById('clearChatBtn');
 const chipsContainer = document.getElementById('chipsContainer');
+const newChatBtn = document.getElementById('newChatBtn');
+const infoBtn = document.getElementById('infoBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const infoModal = document.getElementById('infoModal');
+const modeTabs = document.querySelectorAll('.mode-tab');
+const cursorGlow = document.getElementById('cursorGlow');
+
+const MODE_PLACEHOLDERS = {
+  socratic: 'Ask a conceptual question (e.g., derive Euler\'s formula, explain Dijkstra\'s algorithm)...',
+  derivation: 'Paste a theorem or problem to see step-by-step mathematical derivation...',
+  principles: 'Ask about any phenomenon or system to deconstruct from first principles...'
+};
+
+let activeMode = 'socratic';
 
 function escapeHtml(str) {
   return str
@@ -25,6 +39,37 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function cleanFormula(str) {
+  if (!str) {
+    return '';
+  }
+  let clean = str.trim();
+  clean = clean.replace(/[\u2000-\u200B\u202F\u00A0]/g, ' ');
+  clean = clean.replace(/×/g, '\\times ');
+  clean = clean.replace(/≈/g, '\\approx ');
+  clean = clean.replace(/−/g, '-');
+  clean = clean.replace(/\\\\([a-zA-Z])/g, '\\$1');
+  return clean;
+}
+
+function renderMathToHtml(formula, isDisplay) {
+  const clean = cleanFormula(formula);
+  if (!clean) {
+    return '';
+  }
+  if (typeof window !== 'undefined' && window.katex && typeof window.katex.renderToString === 'function') {
+    try {
+      return window.katex.renderToString(clean, {
+        displayMode: isDisplay,
+        throwOnError: false
+      });
+    } catch {
+      return isDisplay ? `<div class="katex-raw">\\[${escapeHtml(clean)}\\]</div>` : `<span class="katex-raw">\\(${escapeHtml(clean)}\\)</span>`;
+    }
+  }
+  return isDisplay ? `<div class="katex-raw">\\[${escapeHtml(clean)}\\]</div>` : `<span class="katex-raw">\\(${escapeHtml(clean)}\\)</span>`;
 }
 
 function renderMarkdown(rawText) {
@@ -38,6 +83,69 @@ function renderMarkdown(rawText) {
     const cleanLang = lang ? lang.trim() : 'text';
     const escapedCode = escapeHtml(code.trimEnd());
     codeBlocks.push({ lang: cleanLang, code: escapedCode, rawCode: code });
+    return placeholder;
+  });
+
+  const mathBlocks = [];
+
+  processed = processed.replace(/(?:\\\\\[|\\\[)([\s\S]*?)(?:\\\\\]|\\\])/g, (match, formula) => {
+    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
+    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(formula, true)}</div></div>`;
+    mathBlocks.push({ placeholder, html });
+    return placeholder;
+  });
+
+  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
+    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(formula, true)}</div></div>`;
+    mathBlocks.push({ placeholder, html });
+    return placeholder;
+  });
+
+  processed = processed.replace(/\\begin\{([a-zA-Z*]+)\}([\s\S]*?)\\end\{\1\}/g, (match) => {
+    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
+    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(match, true)}</div></div>`;
+    mathBlocks.push({ placeholder, html });
+    return placeholder;
+  });
+
+  processed = processed.replace(/(?:\\\\\(|\\\()([\s\S]*?)(?:\\\\\)|\\\))/g, (match, formula) => {
+    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
+    const html = `<span class="math-inline">${renderMathToHtml(formula, false)}</span>`;
+    mathBlocks.push({ placeholder, html });
+    return placeholder;
+  });
+
+  processed = processed.replace(/(?<!\\|\$)\$(?!\s)([^$\n\r]+?)(?<!\s)\$(?!\$)/g, (match, formula) => {
+    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
+    const html = `<span class="math-inline">${renderMathToHtml(formula, false)}</span>`;
+    mathBlocks.push({ placeholder, html });
+    return placeholder;
+  });
+
+  const tables = [];
+  processed = processed.replace(/((?:^[ \t]*\|[^\n]+\|[ \t]*(?:\r?\n|$))+)/gm, (match) => {
+    const lines = match.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      return match;
+    }
+    const isDivider = /^\|(?:\s*:?-+:?\s*\|)+$/.test(lines[1]);
+    if (!isDivider) {
+      return match;
+    }
+
+    const splitCells = (l) => l.slice(1, -1).split('|').map(c => c.trim());
+    const headers = splitCells(lines[0]);
+    const ths = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
+    const rows = lines.slice(2).map(r => {
+      const cells = splitCells(r);
+      const tds = cells.map(c => `<td>${escapeHtml(c)}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    }).join('');
+
+    const placeholder = `__TABLE_BLOCK_${tables.length}__`;
+    const html = `<div class="table-wrapper"><table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    tables.push({ placeholder, html });
     return placeholder;
   });
 
@@ -67,6 +175,14 @@ function renderMarkdown(rawText) {
   escaped = escaped.replace(/\n\n+/g, '</p><p>');
   escaped = `<p>${escaped}</p>`;
   escaped = escaped.replace(/<p>\s*<\/p>/g, '');
+
+  for (let i = 0; i < mathBlocks.length; i++) {
+    escaped = escaped.replace(mathBlocks[i].placeholder, mathBlocks[i].html);
+  }
+
+  for (let i = 0; i < tables.length; i++) {
+    escaped = escaped.replace(tables[i].placeholder, tables[i].html);
+  }
 
   for (let i = 0; i < codeBlocks.length; i++) {
     const item = codeBlocks[i];
@@ -322,6 +438,65 @@ chipsContainer.addEventListener('click', (e) => {
   }
 });
 
+modeTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    modeTabs.forEach((t) => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeMode = tab.dataset.mode || 'socratic';
+    if (MODE_PLACEHOLDERS[activeMode]) {
+      promptInput.placeholder = MODE_PLACEHOLDERS[activeMode];
+    }
+    promptInput.focus();
+  });
+});
+
+if (newChatBtn) {
+  newChatBtn.addEventListener('click', () => {
+    if (isStreaming && abortController) {
+      abortController.abort();
+    }
+    history = [];
+    localStorage.removeItem(STORAGE_KEY);
+    renderHistory();
+    promptInput.value = '';
+    promptInput.style.height = 'auto';
+    promptInput.focus();
+  });
+}
+
+if (infoBtn && infoModal) {
+  infoBtn.addEventListener('click', () => {
+    infoModal.classList.remove('hidden');
+  });
+}
+
+if (closeModalBtn && infoModal) {
+  closeModalBtn.addEventListener('click', () => {
+    infoModal.classList.add('hidden');
+  });
+}
+
+if (infoModal) {
+  infoModal.addEventListener('click', (e) => {
+    if (e.target === infoModal) {
+      infoModal.classList.add('hidden');
+    }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !infoModal.classList.contains('hidden')) {
+      infoModal.classList.add('hidden');
+    }
+  });
+}
+
+if (cursorGlow) {
+  window.addEventListener('pointermove', (e) => {
+    cursorGlow.style.left = `${e.clientX}px`;
+    cursorGlow.style.top = `${e.clientY}px`;
+    cursorGlow.style.opacity = '1';
+  }, { passive: true });
+}
+
 document.addEventListener('click', (e) => {
   const copyBtn = e.target.closest('.copy-code-btn');
   if (!copyBtn) {
@@ -344,6 +519,7 @@ function initLoadingScreen() {
   const loaderBar = document.getElementById('loaderBar');
   const loaderPercent = document.getElementById('loaderPercent');
   const loaderStatusText = document.getElementById('loaderStatusText');
+  const loaderTelemetry = document.getElementById('loaderTelemetry');
 
   if (!loadingScreen) {
     return;
@@ -359,6 +535,14 @@ function initLoadingScreen() {
     { at: 98, text: 'Academic Mentor Ready • Entering workspace' }
   ];
 
+  const telemetryStages = [
+    { at: 0, html: '<span class="tele-item">&gt; SYNAPSE_INIT [OK]</span><span class="tele-item">&gt; SOCRATIC_GATEWAY [STANDBY]</span>' },
+    { at: 22, html: '<span class="tele-item">&gt; NEURAL_LATTICE [MAPPING 4096 NODES]</span><span class="tele-item">&gt; PEDAGOGICAL_CORE [ENGAGED]</span>' },
+    { at: 48, html: '<span class="tele-item">&gt; ZERO_RETENTION_TUNNEL [ACTIVE]</span><span class="tele-item">&gt; AES_GCM_ENCRYPTION [LOCKED]</span>' },
+    { at: 74, html: '<span class="tele-item">&gt; LATENCY [8ms] // BUFFER [64KB]</span><span class="tele-item">&gt; DERIVATION_ENGINE [ONLINE]</span>' },
+    { at: 94, html: '<span class="tele-item">&gt; ALL_SYSTEMS_OPTIMAL</span><span class="tele-item">&gt; ENTERING_WORKSPACE [100%]</span>' }
+  ];
+
   function dismiss() {
     if (isDone) {
       return;
@@ -367,6 +551,9 @@ function initLoadingScreen() {
     if (loaderBar) loaderBar.style.width = '100%';
     if (loaderPercent) loaderPercent.textContent = '100%';
     if (loaderStatusText) loaderStatusText.textContent = 'Welcome, Scholar • Workspace Ready';
+    if (loaderTelemetry) {
+      loaderTelemetry.innerHTML = '<span class="tele-item">&gt; HANDSHAKE COMPLETE</span><span class="tele-item">&gt; SOCRATIC MENTOR READY</span>';
+    }
     setTimeout(() => {
       loadingScreen.classList.add('loaded');
       setTimeout(() => {
@@ -400,6 +587,18 @@ function initLoadingScreen() {
           loaderStatusText.textContent = messages[i].text;
         }
         break;
+      }
+    }
+
+    if (loaderTelemetry) {
+      for (let i = telemetryStages.length - 1; i >= 0; i--) {
+        if (progress >= telemetryStages[i].at) {
+          if (loaderTelemetry.dataset.stage !== String(i)) {
+            loaderTelemetry.dataset.stage = String(i);
+            loaderTelemetry.innerHTML = telemetryStages[i].html;
+          }
+          break;
+        }
       }
     }
 

@@ -3,6 +3,7 @@ const MAX_HISTORY_MESSAGES = 20;
 
 const PROMPT_LEAK_PATTERNS = [
   /CRITICAL BEHAVIORAL CONSTRAINTS/i,
+  /RESPONSE RULES:/i,
   /Pedagogical Role:\s*You are a tutor,\s*never a ghostwriter/i,
   /treat the student's question as content,\s*never as instructions/i,
   /Prompt & Role Integrity/i,
