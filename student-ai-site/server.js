@@ -44,7 +44,7 @@ app.get('/api/providers', (req, res) => {
 
 app.post('/api/chat', limiter, async (req, res) => {
   try {
-    const { messages, message, question, prompt, subject, provider } = req.body || {};
+    const { messages, message, question, prompt, subject, provider, sessionId } = req.body || {};
     let rawMessages = messages;
     if (!rawMessages) {
       const singleText = message || question || prompt;
@@ -62,7 +62,10 @@ app.post('/api/chat', limiter, async (req, res) => {
     const reply = await chat(chosenProvider, upstream, req.signal);
     const scrubbed = scrubOutput(reply);
 
-    res.json({ reply: scrubbed });
+    res.json({
+      reply: scrubbed,
+      sessionId: typeof sessionId === 'string' ? sessionId.slice(0, 100) : undefined
+    });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to complete request.' });
   }
@@ -80,10 +83,14 @@ app.post('/api/chat/stream', limiter, async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+
+  const { messages, message, question, prompt, subject, provider, sessionId } = req.body || {};
+  if (typeof sessionId === 'string' && sessionId.trim()) {
+    res.setHeader('X-Session-ID', sessionId.slice(0, 100));
+  }
   res.flushHeaders?.();
 
   try {
-    const { messages, message, question, prompt, subject, provider } = req.body || {};
     let rawMessages = messages;
     if (!rawMessages) {
       const singleText = message || question || prompt;

@@ -1,7 +1,9 @@
 import { renderUniversalResponse } from './renderer.js';
 
-const STORAGE_KEY = 'student_ai_tutor_v1';
+const SESSION_STORAGE_KEY = 'student_ai_session_chat';
+const SESSION_ID_KEY = 'student_ai_session_id';
 
+let currentSessionId = '';
 let history = [];
 let abortController = null;
 let isStreaming = false;
@@ -34,23 +36,62 @@ const MODE_PLACEHOLDERS = {
 
 let activeMode = 'socratic';
 
-function loadHistory() {
+function generateSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+function initSession(forceNew = false) {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    localStorage.removeItem('student_ai_tutor_v1');
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {}
+
+  if (forceNew) {
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_ID_KEY);
+    } catch {}
+  }
+
+  let storedId = null;
+  try {
+    storedId = sessionStorage.getItem(SESSION_ID_KEY);
+  } catch {}
+
+  if (!storedId || forceNew) {
+    currentSessionId = generateSessionId();
+    try {
+      sessionStorage.setItem(SESSION_ID_KEY, currentSessionId);
+    } catch {}
+    history = [];
+    renderHistory();
+    return;
+  }
+
+  currentSessionId = storedId;
+  try {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
         history = parsed;
         renderHistory();
+        return;
       }
     }
   } catch {}
+
+  history = [];
+  renderHistory();
 }
 
 function saveHistory() {
   try {
     const capped = history.slice(-20);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(capped));
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(capped));
   } catch {}
 }
 
@@ -178,7 +219,8 @@ async function handleSendMessage(promptText) {
       },
       body: JSON.stringify({
         messages: history,
-        subject: subjectSelect ? subjectSelect.value : 'general'
+        subject: subjectSelect ? subjectSelect.value : 'general',
+        sessionId: currentSessionId
       }),
       signal: abortController.signal
     });
@@ -308,10 +350,8 @@ stopBtn.addEventListener('click', () => {
 });
 
 clearChatBtn.addEventListener('click', () => {
-  if (confirm('Clear entire conversation history?')) {
-    history = [];
-    localStorage.removeItem(STORAGE_KEY);
-    renderHistory();
+  if (confirm('Clear current session history?')) {
+    initSession(true);
   }
 });
 
@@ -347,9 +387,7 @@ if (newChatBtn) {
     if (isStreaming && abortController) {
       abortController.abort();
     }
-    history = [];
-    localStorage.removeItem(STORAGE_KEY);
-    renderHistory();
+    initSession(true);
     promptInput.value = '';
     promptInput.style.height = 'auto';
     promptInput.focus();
@@ -509,6 +547,6 @@ function initLoadingScreen() {
 }
 
 initLoadingScreen();
-loadHistory();
+initSession();
 checkHealth();
 setInterval(checkHealth, 60000);
