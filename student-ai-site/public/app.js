@@ -1,3 +1,5 @@
+import { renderUniversalResponse } from './renderer.js';
+
 const STORAGE_KEY = 'student_ai_tutor_v1';
 
 let history = [];
@@ -25,181 +27,12 @@ const modeTabs = document.querySelectorAll('.mode-tab');
 const cursorGlow = document.getElementById('cursorGlow');
 
 const MODE_PLACEHOLDERS = {
-  socratic: 'Ask a conceptual question (e.g., derive Euler\'s formula, explain Dijkstra\'s algorithm)...',
-  derivation: 'Paste a theorem or problem to see step-by-step mathematical derivation...',
-  principles: 'Ask about any phenomenon or system to deconstruct from first principles...'
+  socratic: 'Type your prompt here...',
+  derivation: 'Type your prompt here...',
+  principles: 'Type your prompt here...'
 };
 
 let activeMode = 'socratic';
-
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function cleanFormula(str) {
-  if (!str) {
-    return '';
-  }
-  let clean = str.trim();
-  clean = clean.replace(/[\u2000-\u200B\u202F\u00A0]/g, ' ');
-  clean = clean.replace(/×/g, '\\times ');
-  clean = clean.replace(/≈/g, '\\approx ');
-  clean = clean.replace(/−/g, '-');
-  clean = clean.replace(/\\\\([a-zA-Z])/g, '\\$1');
-  return clean;
-}
-
-function renderMathToHtml(formula, isDisplay) {
-  const clean = cleanFormula(formula);
-  if (!clean) {
-    return '';
-  }
-  if (typeof window !== 'undefined' && window.katex && typeof window.katex.renderToString === 'function') {
-    try {
-      return window.katex.renderToString(clean, {
-        displayMode: isDisplay,
-        throwOnError: false
-      });
-    } catch {
-      return isDisplay ? `<div class="katex-raw">\\[${escapeHtml(clean)}\\]</div>` : `<span class="katex-raw">\\(${escapeHtml(clean)}\\)</span>`;
-    }
-  }
-  return isDisplay ? `<div class="katex-raw">\\[${escapeHtml(clean)}\\]</div>` : `<span class="katex-raw">\\(${escapeHtml(clean)}\\)</span>`;
-}
-
-function renderMarkdown(rawText) {
-  if (!rawText) {
-    return '';
-  }
-
-  const codeBlocks = [];
-  let processed = rawText.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)(?:```|$)/g, (match, lang, code) => {
-    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
-    const cleanLang = lang ? lang.trim() : 'text';
-    const escapedCode = escapeHtml(code.trimEnd());
-    codeBlocks.push({ lang: cleanLang, code: escapedCode, rawCode: code });
-    return placeholder;
-  });
-
-  const mathBlocks = [];
-
-  processed = processed.replace(/(?:\\\\\[|\\\[)([\s\S]*?)(?:\\\\\]|\\\])/g, (match, formula) => {
-    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
-    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(formula, true)}</div></div>`;
-    mathBlocks.push({ placeholder, html });
-    return placeholder;
-  });
-
-  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
-    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
-    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(formula, true)}</div></div>`;
-    mathBlocks.push({ placeholder, html });
-    return placeholder;
-  });
-
-  processed = processed.replace(/\\begin\{([a-zA-Z*]+)\}([\s\S]*?)\\end\{\1\}/g, (match) => {
-    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
-    const html = `<div class="math-block-wrapper"><div class="math-display">${renderMathToHtml(match, true)}</div></div>`;
-    mathBlocks.push({ placeholder, html });
-    return placeholder;
-  });
-
-  processed = processed.replace(/(?:\\\\\(|\\\()([\s\S]*?)(?:\\\\\)|\\\))/g, (match, formula) => {
-    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
-    const html = `<span class="math-inline">${renderMathToHtml(formula, false)}</span>`;
-    mathBlocks.push({ placeholder, html });
-    return placeholder;
-  });
-
-  processed = processed.replace(/(?<!\\|\$)\$(?!\s)([^$\n\r]+?)(?<!\s)\$(?!\$)/g, (match, formula) => {
-    const placeholder = `__MATH_BLOCK_${mathBlocks.length}__`;
-    const html = `<span class="math-inline">${renderMathToHtml(formula, false)}</span>`;
-    mathBlocks.push({ placeholder, html });
-    return placeholder;
-  });
-
-  const tables = [];
-  processed = processed.replace(/((?:^[ \t]*\|[^\n]+\|[ \t]*(?:\r?\n|$))+)/gm, (match) => {
-    const lines = match.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (lines.length < 2) {
-      return match;
-    }
-    const isDivider = /^\|(?:\s*:?-+:?\s*\|)+$/.test(lines[1]);
-    if (!isDivider) {
-      return match;
-    }
-
-    const splitCells = (l) => l.slice(1, -1).split('|').map(c => c.trim());
-    const headers = splitCells(lines[0]);
-    const ths = headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
-    const rows = lines.slice(2).map(r => {
-      const cells = splitCells(r);
-      const tds = cells.map(c => `<td>${escapeHtml(c)}</td>`).join('');
-      return `<tr>${tds}</tr>`;
-    }).join('');
-
-    const placeholder = `__TABLE_BLOCK_${tables.length}__`;
-    const html = `<div class="table-wrapper"><table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>`;
-    tables.push({ placeholder, html });
-    return placeholder;
-  });
-
-  let escaped = escapeHtml(processed);
-
-  escaped = escaped.replace(/`([^`\n]+)`/g, (match, code) => {
-    return `<code class="inline-code">${code}</code>`;
-  });
-
-  escaped = escaped.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  escaped = escaped.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  escaped = escaped.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  escaped = escaped.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-  escaped = escaped.replace(/~~(.*?)~~/g, '<del>$1</del>');
-
-  escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, text, url) => {
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
-  });
-
-  escaped = escaped.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
-
-  escaped = escaped.replace(/^(\d+)\. (.*$)/gim, '<div class="list-item num"><span class="num-idx">$1.</span> $2</div>');
-  escaped = escaped.replace(/^[-*] (.*$)/gim, '<div class="list-item bullet"><span class="bullet-dot">•</span> $1</div>');
-
-  escaped = escaped.replace(/\n\n+/g, '</p><p>');
-  escaped = `<p>${escaped}</p>`;
-  escaped = escaped.replace(/<p>\s*<\/p>/g, '');
-
-  for (let i = 0; i < mathBlocks.length; i++) {
-    escaped = escaped.replace(mathBlocks[i].placeholder, mathBlocks[i].html);
-  }
-
-  for (let i = 0; i < tables.length; i++) {
-    escaped = escaped.replace(tables[i].placeholder, tables[i].html);
-  }
-
-  for (let i = 0; i < codeBlocks.length; i++) {
-    const item = codeBlocks[i];
-    const blockHtml = `
-      <div class="code-block-wrapper">
-        <div class="code-block-header">
-          <span>${item.lang}</span>
-          <button type="button" class="copy-code-btn" data-code="${encodeURIComponent(item.rawCode)}">Copy</button>
-        </div>
-        <pre><code class="language-${item.lang}">${item.code}</code></pre>
-      </div>
-    `;
-    escaped = escaped.replace(`__CODE_BLOCK_${i}__`, blockHtml);
-  }
-
-  return escaped;
-}
 
 function loadHistory() {
   try {
@@ -253,7 +86,7 @@ function appendMessageBubble(role, content = '', isError = false) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   if (role === 'assistant') {
-    bubble.innerHTML = renderMarkdown(content);
+    bubble.innerHTML = renderUniversalResponse(content, { isStreaming: false });
   } else {
     bubble.textContent = content;
   }
@@ -335,16 +168,17 @@ async function handleSendMessage(promptText) {
 
   let assistantBubble = null;
   let accumulatedText = '';
+  let renderRaf = null;
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         messages: history,
-        subject: subjectSelect.value
+        subject: subjectSelect ? subjectSelect.value : 'general'
       }),
       signal: abortController.signal
     });
@@ -355,33 +189,90 @@ async function handleSendMessage(promptText) {
         const errJson = await response.json();
         if (errJson.error) {
           errMessage = errJson.error;
+        } else if (errJson.message) {
+          errMessage = errJson.message;
         }
       } catch {}
       throw new Error(errMessage);
     }
 
-    const data = await response.json();
-    const reply = data.reply || '';
-
     typingIndicator.classList.add('hidden');
+    assistantBubble = appendMessageBubble('assistant', '', false);
 
-    if (reply) {
-      appendMessageBubble('assistant', reply);
-      history.push({ role: 'assistant', content: reply });
-      saveHistory();
-    } else {
-      appendMessageBubble('assistant', 'The tutor provided an empty response. Please verify the active model settings.', true);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('data:')) {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr) {
+            try {
+              const data = JSON.parse(jsonStr);
+              if (data.text) {
+                accumulatedText += data.text;
+                if (!renderRaf) {
+                  renderRaf = requestAnimationFrame(() => {
+                    renderRaf = null;
+                    if (assistantBubble) {
+                      assistantBubble.innerHTML = renderUniversalResponse(accumulatedText, { isStreaming: true });
+                      scrollToBottom();
+                    }
+                  });
+                }
+              } else if (data.message && !accumulatedText) {
+                throw new Error(data.message);
+              }
+            } catch (e) {
+              if (e.message && !accumulatedText) {
+                throw e;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (renderRaf) {
+      cancelAnimationFrame(renderRaf);
+      renderRaf = null;
+    }
+
+    if (assistantBubble) {
+      if (accumulatedText.trim()) {
+        assistantBubble.innerHTML = renderUniversalResponse(accumulatedText, { isStreaming: false });
+        history.push({ role: 'assistant', content: accumulatedText });
+        saveHistory();
+      } else {
+        assistantBubble.innerHTML = renderUniversalResponse('The model provided an empty response.', { isStreaming: false });
+      }
     }
   } catch (err) {
+    if (renderRaf) {
+      cancelAnimationFrame(renderRaf);
+      renderRaf = null;
+    }
     typingIndicator.classList.add('hidden');
     if (err.name === 'AbortError') {
-      const reason = err.message || '';
-      if (reason.includes('timed out')) {
-        appendMessageBubble('assistant', 'The request timed out after 45 seconds. Please try asking again.', true);
-      } else {
-        appendMessageBubble('assistant', 'Response stopped by student.', true);
+      if (!accumulatedText && assistantBubble) {
+        assistantBubble.parentElement?.remove();
+      } else if (assistantBubble) {
+        assistantBubble.innerHTML = renderUniversalResponse(accumulatedText, { isStreaming: false });
       }
     } else {
+      if (assistantBubble) {
+        assistantBubble.parentElement?.remove();
+      }
       appendMessageBubble('assistant', `Tutor unavailable: ${err.message}`, true);
     }
   } finally {
@@ -389,6 +280,7 @@ async function handleSendMessage(promptText) {
     typingIndicator.classList.add('hidden');
     setStreamingUI(false);
     abortController = null;
+    scrollToBottom();
   }
 }
 
@@ -505,10 +397,14 @@ document.addEventListener('click', (e) => {
   const code = decodeURIComponent(copyBtn.getAttribute('data-code') || '');
   if (code) {
     navigator.clipboard.writeText(code).then(() => {
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = 'Copied!';
+      const textSpan = copyBtn.querySelector('.copy-btn-text');
+      const target = textSpan || copyBtn;
+      const originalText = target.textContent;
+      target.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
       setTimeout(() => {
-        copyBtn.textContent = originalText;
+        target.textContent = originalText;
+        copyBtn.classList.remove('copied');
       }, 2000);
     });
   }

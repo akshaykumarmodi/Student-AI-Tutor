@@ -251,6 +251,15 @@ export async function chat(providerName, messages, signal) {
     throw new Error(`API token for ${provider.name} is missing. Please configure ${getProviderKeyName(activeKey)} in your .env file.`);
   }
 
+  const modelName = provider.model();
+  const isClassification = /prompt-guard|safeguard/i.test(modelName);
+
+  let requestMessages = messages;
+  if (isClassification) {
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
+    requestMessages = [{ role: 'user', content: lastUserMsg }];
+  }
+
   const url = `${provider.baseUrl().replace(/\/$/, '')}/chat/completions`;
   const effectiveSignal = signal
     ? AbortSignal.any([signal, AbortSignal.timeout(45000)])
@@ -262,8 +271,8 @@ export async function chat(providerName, messages, signal) {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify({
-        model: provider.model(),
-        messages,
+        model: modelName,
+        messages: requestMessages,
         stream: false
       }),
       signal: effectiveSignal
@@ -281,12 +290,35 @@ export async function chat(providerName, messages, signal) {
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  const rawContent = data.choices?.[0]?.message?.content || '';
+  if (isClassification) {
+    const num = parseFloat(rawContent);
+    const scoreText = Number.isFinite(num) ? num.toFixed(6) : rawContent;
+    const isRisky = Number.isFinite(num) && num > 0.5;
+    const riskLabel = isRisky ? 'High (Risk of Prompt Injection / Malicious Prompt)' : 'Low (Safe Prompt)';
+    return `### Meta Prompt Guard 2 (22M) Analysis\n\n- **Model:** \`${modelName}\`\n- **Injection Risk Score:** \`${scoreText}\`\n- **Safety Assessment:** **${riskLabel}**\n\n*(Note: \`${modelName}\` is a 22-million parameter security classifier from Meta designed to detect prompt attacks, rather than generate conversational tutor lessons.)*`;
+  }
+  return rawContent;
 }
 
 export async function* chatStream(providerName, messages, signal) {
   const provider = getProvider(providerName);
   const activeKey = providerName || getActiveProviderName();
+  const modelName = provider.model();
+  const isClassification = /prompt-guard|safeguard/i.test(modelName);
+
+  if (isClassification) {
+    const fullResult = await chat(providerName, messages, signal);
+    const tokens = fullResult.split(' ');
+    for (let i = 0; i < tokens.length; i++) {
+      if (signal?.aborted) {
+        return;
+      }
+      yield tokens[i] + (i < tokens.length - 1 ? ' ' : '');
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    return;
+  }
 
   if (activeKey === 'demo') {
     const question = messages[messages.length - 1]?.content || '';
@@ -316,7 +348,7 @@ export async function* chatStream(providerName, messages, signal) {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify({
-        model: provider.model(),
+        model: modelName,
         messages,
         stream: true
       }),

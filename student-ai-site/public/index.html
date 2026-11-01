@@ -11,13 +11,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="vendor/prism/prism.min.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script>window.katex || document.write('<script src="vendor/katex/katex.min.js"><\/script>');</script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="vendor/marked.min.js"></script>
+  <script src="vendor/purify.min.js"></script>
+  <script src="vendor/prism/prism.min.js"></script>
+  <script src="vendor/prism/prism-python.min.js"></script>
+  <script src="vendor/prism/prism-bash.min.js"></script>
+  <script src="vendor/prism/prism-java.min.js"></script>
+  <script src="vendor/prism/prism-c.min.js"></script>
+  <script src="vendor/prism/prism-cpp.min.js"></script>
+  <script src="vendor/prism/prism-json.min.js"></script>
+  <script src="vendor/prism/prism-yaml.min.js"></script>
+  <script src="vendor/prism/prism-sql.min.js"></script>
 </head><body>
   <div id="loadingScreen" class="loading-screen" aria-live="polite">
     <div class="loader-backdrop">
@@ -198,32 +208,7 @@
         <h1 class="empty-heading">Master Concepts Step by Step</h1>
         <p class="empty-subtext">Ask any question to receive structured reasoning, conceptual derivations, and interactive intuition.</p>
 
-        <div class="chips-grid" id="chipsContainer">
-          <button class="chip" data-subject="maths" data-prompt="Can you explain the intuitive geometric proof of the Pythagorean theorem and how it generalizes?">
-            <span class="chip-tag maths">Maths</span>
-            <span class="chip-text">Intuitive proof of the Pythagorean theorem</span>
-          </button>
-          <button class="chip" data-subject="physics" data-prompt="Why doesn't the moon fall into the Earth? Explain orbital mechanics intuitively using Newton's cannonball thought experiment.">
-            <span class="chip-tag physics">Physics</span>
-            <span class="chip-text">Newton's cannonball & orbital mechanics</span>
-          </button>
-          <button class="chip" data-subject="programming" data-prompt="Explain how event loops and the microtask queue work in JavaScript with a clear timeline breakdown.">
-            <span class="chip-tag code">Code</span>
-            <span class="chip-text">JavaScript event loop & microtask queue</span>
-          </button>
-          <button class="chip" data-subject="biology" data-prompt="How do CRISPR-Cas9 enzymes locate target DNA sequences and perform precise molecular cuts?">
-            <span class="chip-tag biology">Biology</span>
-            <span class="chip-text">Molecular mechanism of CRISPR-Cas9</span>
-          </button>
-          <button class="chip" data-subject="history" data-prompt="What primary socioeconomic conditions sparked the Industrial Revolution in 18th-century Britain?">
-            <span class="chip-tag history">History</span>
-            <span class="chip-text">Origins of the Industrial Revolution</span>
-          </button>
-          <button class="chip" data-subject="chemistry" data-prompt="Explain why water has an anomalous boiling point and density maximum at 4°C using hydrogen bonding principles.">
-            <span class="chip-tag chem">Chemistry</span>
-            <span class="chip-text">Hydrogen bonding & anomalous water density</span>
-          </button>
-        </div>
+        <div class="chips-grid" id="chipsContainer" style="display: none;"></div>
       </div>
 
       <div id="messagesList" class="messages-list"></div>
@@ -249,8 +234,8 @@
             id="promptInput"
             class="prompt-textarea"
             rows="1"
-            placeholder="Ask a conceptual question (e.g., derive Euler's formula, explain Dijkstra's algorithm)..."
-            aria-label="Student question input"
+            placeholder="Type your prompt here..."
+            aria-label="Student prompt input"
           ></textarea>
           
           <div class="form-actions">
